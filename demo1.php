@@ -8,30 +8,36 @@
 <?php
     $errors = [];
     $inputs = [];
-    $result = [];
 
+    // sanitize only (no HTML escaping here)
     function test_input($data) {
         $data = trim($data);
         $data = stripslashes($data);
-        $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
         return $data;
+    }
+
+    // helper để escape khi in ra HTML
+    function e($s) {
+        return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     }
 
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         for ($i = 1; $i <= 10; $i++) {
             $field = "input$i";
-                if (empty($_POST[$field])) {
-                
+            $raw = $_POST[$field] ?? '';
+            $value = test_input($raw);
+
+            // check required on the sanitized value
+            if ($value === '') {
                 $errors[$field] = "Input $i is required";
             } else {
-               
-                if (!preg_match("/^[0-9]+$/", $_POST[$field])) {
+                // validate on sanitized value
+                if (!preg_match("/^[0-9]+$/", $value)) {
                     $errors[$field] = "Only numbers (0-9) allowed";
                 } else {
-                    $inputs[$i] = test_input($_POST[$field]);
+                    $inputs[$i] = $value; // safe numeric string
                 }
             }
-
         }
 
         if (empty($errors)) {
@@ -56,51 +62,46 @@
 <h2>PHP Group</h2>
 <form method="POST">
 
-
-
 <?php for ($i = 1; $i <= 10; $i++): ?>
     <?php
-        $value = isset($_POST["input$i"]) 
-            ? htmlspecialchars($_POST["input$i"], ENT_QUOTES, 'UTF-8') 
-            : '';
+        // chuẩn bị giá trị hiển thị: nếu có POST thì sanitize rồi escape khi in
+        $raw = $_POST["input$i"] ?? '';
+        $display = $raw !== '' ? e(test_input($raw)) : '';
     ?>
-    Input <?= $i ?>: 
-    <input type="text" name="input<?= $i ?>" value="<?php echo $value; ?>">
+    Input <?= $i ?>:
+    <input type="text" name="input<?= $i ?>" value="<?php echo $display; ?>">
     <span class="error"><?php echo $errors["input$i"] ?? ''; ?></span>
     <br><br>
 <?php endfor; ?>
 
-
 <input type="submit" value="Submit">
 
+</form>
 
 <?php
-echo "<h2>Your Input number:</h2>";
-for ($i = 1; $i <= 10; $i++) {
-    $field = "input$i";
-    
-    if (isset($_POST[$field]) && empty($errors[$field]) && $_POST[$field] !== "") {
-        echo "Input $i: " . test_input($_POST[$field]) . "<br>";
-    } 
-    // else {
-    //     echo "Input $i: Invalid or empty<br>";
-    // }
+// Hiển thị các input hợp lệ (đã validate & sanitize) — vẫn escape khi in ra
+if (!empty($inputs)) {
+    echo "<h2>Your Input number:</h2>";
+    for ($i = 1; $i <= 10; $i++) {
+        if (isset($inputs[$i])) {
+            echo "Input $i: " . e($inputs[$i]) . "<br>";
+        }
+    }
 }
 ?>
 
-</form>
 <h2>Groups Result:</h2>
 
-<b>Group 1 (desc):</b> 
-<?php echo isset($g1) ? $g1 : "No result yet"; ?>
+<b>Group 1 (desc):</b>
+<?php echo isset($g1) ? e($g1) : "No result yet"; ?>
 <br>
 
-<b>Group 2 (%3 desc):</b> 
-<?php echo isset($g2) ? $g2 : "No result yet"; ?>
+<b>Group 2 (%3 desc):</b>
+<?php echo isset($g2) ? e($g2) : "No result yet"; ?>
 <br>
 
-<b>Group 3 (%5 asc):</b> 
-<?php echo isset($g3) ? $g3 : "No result yet"; ?>
+<b>Group 3 (%5 asc):</b>
+<?php echo isset($g3) ? e($g3) : "No result yet"; ?>
 <br>
 
 </body>
